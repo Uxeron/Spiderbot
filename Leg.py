@@ -2,6 +2,7 @@ from __future__ import division
 import random
 import Adafruit_PCA9685
 import thread
+import sys
 from time import sleep
 from inputs import get_gamepad
 
@@ -17,6 +18,8 @@ speeds = [0, 0, 0, 0, 0, 0]
 interval = 0.002
 speed = 3
 divisor = 30
+
+exit = False
                         # Digital inputs
 movements = {"BTN_TL":   "speeds[5] = -speed if state else 0",
              "ABS_BRAKE":"speeds[5] =  speed if state else 0",
@@ -26,7 +29,9 @@ movements = {"BTN_TL":   "speeds[5] = -speed if state else 0",
              "ABS_X":    "speeds[3] = (state - 128)/divisor",
              "ABS_Y":    "speeds[4] = (128 - state)/divisor",
              "ABS_Z":    "speeds[0] = (state - 128)/divisor",
-             "ABS_RZ":   "speeds[1] = (128 - state)/divisor"}
+             "ABS_RZ":   "speeds[1] = (128 - state)/divisor",
+
+             "BTN_START":"global exit; exit = True"}
 
 def reader():
     with open("LegData.txt", "r") as inp:
@@ -44,6 +49,7 @@ def writer():
         out.write(" ".join(map(str, map(int, pos))) + "\r\n")
 
 def readControllerInput():
+    #global exit
     while True:
         events = get_gamepad()
         for event in events:
@@ -69,7 +75,8 @@ inpThread2 = thread.start_new_thread(readInput, ())
 
 try:
     while True:
-
+        if exit:
+            raise KeyboardInterrupt
         for i in xrange(6):
             if 0 < pos[i] + speeds[i] < limits[i]:
                 pos[i] += speeds[i]
@@ -79,11 +86,8 @@ try:
                 print "IO Error occurred, continuing..."
                 continue
         print map(int, pos)
-        #print speeds
         sleep(interval)
 except KeyboardInterrupt:
-    #inpThread1.exit()
-    #inpThread2.exit()
     pwm = Adafruit_PCA9685.PCA9685()
     writer()
     print "Program stopping"
