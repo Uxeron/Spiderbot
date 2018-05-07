@@ -28,7 +28,22 @@ movements = {"BTN_TL":   "speeds[5] = -speed if state else 0",
              "ABS_Z":    "speeds[0] = (state - 128)/divisor",
              "ABS_RZ":   "speeds[1] = (128 - state)/divisor"}
 
-def readInput():
+def reader():
+    with open("LegData.txt", "r") as inp:
+        global start, limits, pos
+        start = map(int, inp.readline().split(" "))
+        limits = map(int, inp.readline().split(" "))
+        pos = map(int, inp.readline().split(" "))
+
+reader()
+
+def writer():
+    with open("LegData.txt", "w") as out:
+        out.write(" ".join(map(str, map(int, start))) + "\r\n")
+        out.write(" ".join(map(str, map(int, limits))) + "\r\n")
+        out.write(" ".join(map(str, map(int, pos))) + "\r\n")
+
+def readControllerInput():
     while True:
         events = get_gamepad()
         for event in events:
@@ -36,8 +51,21 @@ def readInput():
                 state = event.state
                 exec(movements[event.code])
 
+def readInput():
+    while True:
+        data = raw_input().split(" ")
+        if len(data) == 3:
+            if data[0] in ("lim", "limit"):
+                limits[int(data[1])] = int(data[2])
+                writer()
+            elif data[0] in ("start", "begin"):
+                start[int(data[1])] = int(data[2])
+                writer()
 
-thread.start_new_thread(readInput, ())
+inpThread1 = thread.start_new_thread(readControllerInput, ())
+inpThread2 = thread.start_new_thread(readInput, ())
+
+
 
 try:
     while True:
@@ -54,5 +82,8 @@ try:
         #print speeds
         sleep(interval)
 except KeyboardInterrupt:
+    #inpThread1.exit()
+    #inpThread2.exit()
     pwm = Adafruit_PCA9685.PCA9685()
+    writer()
     print "Program stopping"
